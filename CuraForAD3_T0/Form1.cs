@@ -112,7 +112,14 @@ namespace CureForAD3_T0
 			{
 				foreach (string s in cmd)
 				{
-					textBox1.Text += s;
+					if (ChnageT0(s)==false)
+					{
+						textBox1.Text += "Error : " + s + "\r\n";
+					}
+					else
+					{
+						textBox1.Text += "Success! : " + s + "\r\n";
+					}
 				}
 			}
 		}
@@ -132,13 +139,83 @@ namespace CureForAD3_T0
 			AppInfoDialog.ShowAppInfoDialog();
 		}
 		//-------------------------------------------------------------
+		private string BakFileName(string p)
+		{
+			if (File.Exists(p)==false)
+			{
+				return p;
+			}
+			string p2 = Path.GetFileNameWithoutExtension(p);
+			int inx = 0;
+			string pp = p2 + string.Format(".{0:3}",inx);
+			while(File.Exists(pp)==true)
+			{
+				inx++;
+				pp = p2 + string.Format(".{0:3}",inx);
+			}
+			return pp;
+		}
+
+		//-------------------------------------------------------------
 		public bool ChnageT0(string p)
 		{
 			bool ret = false;
 			if (File.Exists(p) == false) return ret;
 
+			string[] lines = new string[0]; try
+			{
+				lines = System.IO.File.ReadAllLines(p, Encoding.GetEncoding("shift_jis"));
+			}
+			catch
+			{
+				return ret;
+			}
+			if (lines.Length <= 0) return ret;
 
+			for (int i=0; i< lines.Length; i++)
+			{
+				string[] line = lines[i].Trim().Split(' ');
+				switch(line.Length)
+				{
+					case 0:
+					case 1:
+						break;
+					default:
+						if  (line[0] == "M140")
+						{
+							lines[i] += " T0";
 
+						}else if (line[0] == "M104")
+						{
+							if ((line.Length==2)&&(line[1]=="S0"))
+							{
+								lines[i] += " T1";
+							}
+							else
+							{
+								lines[i] += " T0";
+							}
+						}
+						break;
+				}
+			}
+
+			try
+			{
+				string gfile = Path.ChangeExtension(p, ".g");
+
+				if (File.Exists(gfile)==true)
+				{
+					string bak = BakFileName(Path.ChangeExtension(gfile, ".000"));
+					File.Move(gfile, bak);
+				}
+				System.IO.File.WriteAllLines(gfile, lines, Encoding.GetEncoding("shift_jis"));
+				ret = true;
+			}
+			catch
+			{
+				ret = false;
+			}
 			return ret;
 		}
 
